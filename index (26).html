@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoidClient — Der ultimative Minecraft Launcher</title>
+<meta name="description" content="VoidClient — Der schnellste, modernste Minecraft Launcher. Modpacks, Java-Management, Discord RPC und mehr.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #7000ff;
+  --void2: #c000ff;
+  --cyan: #00d4ff;
+  --bg: #04000e;
+  --bg2: #080018;
+  --text: #e8e0ff;
+  --muted: rgba(200,180,255,0.45);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ── CURSOR ── */
+#cur {
+  position: fixed; width: 10px; height: 10px;
+  background: var(--void2); border-radius: 50%;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: transform 0.1s, width 0.2s, height 0.2s, background 0.2s;
+  mix-blend-mode: screen;
+}
+#cur2 {
+  position: fixed; width: 36px; height: 36px;
+  border: 1px solid rgba(192,0,255,0.4); border-radius: 50%;
+  pointer-events: none; z-index: 9998;
+  transform: translate(-50%,-50%);
+  transition: transform 0.18s ease, width 0.3s, height 0.3s;
+}
+body:hover #cur { width: 14px; height: 14px; }
+
+/* ── CANVAS BG ── */
+#bgc { position: fixed; inset: 0; z-index: 0; opacity: 0.55; }
+
+/* ── NOISE OVERLAY ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 6vw;
+  background: linear-gradient(to bottom, rgba(4,0,14,0.95), transparent);
+  backdrop-filter: blur(0px);
+}
+.nav-logo {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 18px; letter-spacing: 4px;
+  color: #fff;
+  text-decoration: none;
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-logo span {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--void2);
+  box-shadow: 0 0 12px var(--void2);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.7);} }
+
+.nav-links { display: flex; gap: 36px; align-items: center; }
+.nav-links a {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 2px;
+  color: var(--muted); text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: #fff; }
+.nav-dl {
+  background: rgba(112,0,255,0.15);
+  border: 1px solid rgba(112,0,255,0.5);
+  color: #fff !important;
+  padding: 9px 22px; border-radius: 4px;
+  transition: all 0.2s !important;
+}
+.nav-dl:hover {
+  background: rgba(112,0,255,0.35) !important;
+  box-shadow: 0 0 24px rgba(112,0,255,0.4);
+}
+
+/* ── HERO ── */
+#hero {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 120px 6vw 80px;
+}
+
+.hero-pre {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 6px;
+  color: var(--void2); opacity: 0.7;
+  margin-bottom: 28px;
+  animation: fadeUp 1s ease 0.2s both;
+}
+
+.hero-title {
+  font-size: clamp(56px, 10vw, 140px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  margin-bottom: 32px;
+  animation: fadeUp 1s ease 0.4s both;
+}
+.hero-title .void {
+  display: block;
+  background: linear-gradient(135deg, #fff 0%, var(--void2) 45%, var(--cyan) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 60px rgba(112,0,255,0.5));
+}
+.hero-title .client {
+  display: block; color: rgba(255,255,255,0.12);
+  -webkit-text-stroke: 1px rgba(255,255,255,0.2);
+}
+
+.hero-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: clamp(12px, 1.5vw, 16px);
+  color: var(--muted);
+  line-height: 1.9;
+  max-width: 540px;
+  margin: 0 auto 56px;
+  animation: fadeUp 1s ease 0.6s both;
+}
+
+.hero-btns {
+  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+  animation: fadeUp 1s ease 0.8s both;
+}
+
+.btn-primary {
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(135deg, var(--void), var(--void2));
+  color: #fff; text-decoration: none;
+  padding: 16px 40px; border-radius: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px; letter-spacing: 3px;
+  box-shadow: 0 0 60px rgba(112,0,255,0.4), 0 0 120px rgba(112,0,255,0.15);
+  transition: all 0.3s;
+  position: relative; overflow: hidden;
+}
+.btn-primary::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--void2), var(--cyan));
+  opacity: 0; transition: opacity 0.3s;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 80px rgba(112,0,255,0.6), 0 0 160px rgba(112,0,255,0.2); }
+.btn-primary:hover::before { opacity: 1; }
+.btn-primary span { position: relative; z-index: 1; }
+.btn-primary svg { position: relative; z-index: 1; }
+
+.btn-secondary {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7); text-decoration: none;
+  padding: 16px 40px; border-radius: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px; letter-spacing: 3px;
+  transition: all 0.3s;
+}
+.btn-secondary:hover { border-color: rgba(192,0,255,0.5); color: #fff; background: rgba(112,0,255,0.08); }
+
+/* Stats bar */
+.hero-stats {
+  margin-top: 80px;
+  display: flex; gap: 60px; justify-content: center; flex-wrap: wrap;
+  animation: fadeUp 1s ease 1s both;
+}
+.stat { text-align: center; }
+.stat-num {
+  font-size: clamp(28px,4vw,48px); font-weight: 800;
+  background: linear-gradient(135deg, #fff, var(--void2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.stat-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: 3px; color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Scroll indicator */
+.scroll-hint {
+  position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: 4px; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  animation: fadeUp 1s ease 1.2s both;
+}
+.scroll-line {
+  width: 1px; height: 50px;
+  background: linear-gradient(to bottom, var(--void2), transparent);
+  animation: scrollLine 1.5s ease-in-out infinite;
+}
+@keyframes scrollLine { 0%,100%{transform:scaleY(1);opacity:1;} 50%{transform:scaleY(0.5);opacity:0.4;} }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SECTION BASE ── */
+section {
+  position: relative; z-index: 2;
+  padding: 120px 6vw;
+}
+
+.section-pre {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 6px; color: var(--void2);
+  margin-bottom: 16px; opacity: 0.8;
+}
+.section-title {
+  font-size: clamp(32px, 5vw, 64px); font-weight: 800;
+  line-height: 1.05; letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+.section-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px; color: var(--muted); line-height: 1.8;
+  max-width: 480px;
+}
+
+/* ── DIVIDER ── */
+.divider {
+  position: relative; z-index: 2;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(112,0,255,0.4), transparent);
+  margin: 0 6vw;
+}
+
+/* ── FEATURES ── */
+#features { background: linear-gradient(to bottom, transparent, rgba(112,0,255,0.04), transparent); }
+
+.features-header { text-align: center; margin-bottom: 80px; }
+.features-header .section-sub { margin: 0 auto; }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2px;
+  max-width: 1200px; margin: 0 auto;
+}
+
+.feat {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 40px 36px;
+  position: relative; overflow: hidden;
+  transition: all 0.3s;
+}
+.feat::before {
+  content: ''; position: absolute;
+  inset: 0; opacity: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(112,0,255,0.15), transparent 70%);
+  transition: opacity 0.3s;
+}
+.feat:hover { border-color: rgba(112,0,255,0.3); transform: translateY(-4px); }
+.feat:hover::before { opacity: 1; }
+
+.feat-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: rgba(112,0,255,0.12);
+  border: 1px solid rgba(112,0,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 24px;
+  transition: all 0.3s;
+}
+.feat:hover .feat-icon {
+  background: rgba(112,0,255,0.25);
+  box-shadow: 0 0 24px rgba(112,0,255,0.3);
+}
+
+.feat-title {
+  font-size: 18px; font-weight: 700; margin-bottom: 12px;
+}
+.feat-desc {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px; color: var(--muted); line-height: 1.8;
+}
+.feat-tag {
+  display: inline-block; margin-top: 16px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  color: var(--void2); background: rgba(192,0,255,0.08);
+  border: 1px solid rgba(192,0,255,0.2);
+  padding: 4px 12px; border-radius: 20px;
+}
+
+/* ── DOWNLOAD ── */
+#download {
+  text-align: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(112,0,255,0.08), transparent);
+}
+
+.dl-card {
+  max-width: 680px; margin: 60px auto 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(112,0,255,0.25);
+  border-radius: 16px;
+  padding: 48px;
+  position: relative; overflow: hidden;
+}
+.dl-card::before {
+  content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--void2), transparent);
+}
+
+.dl-version {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 4px; color: var(--muted);
+  margin-bottom: 12px;
+}
+.dl-name {
+  font-size: 32px; font-weight: 800; margin-bottom: 8px;
+}
+.dl-size {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; color: var(--muted); margin-bottom: 36px;
+}
+
+.dl-platforms {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+.dl-platform {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 20px; border-radius: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.7); text-decoration: none;
+  transition: all 0.25s;
+}
+.dl-platform:hover {
+  border-color: rgba(112,0,255,0.5);
+  color: #fff; background: rgba(112,0,255,0.1);
+  box-shadow: 0 0 20px rgba(112,0,255,0.2);
+}
+
+.dl-main {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: linear-gradient(135deg, var(--void), var(--void2));
+  color: #fff; text-decoration: none;
+  padding: 18px 40px; border-radius: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px; letter-spacing: 4px; font-weight: 700;
+  box-shadow: 0 0 60px rgba(112,0,255,0.35);
+  transition: all 0.3s;
+}
+.dl-main:hover { transform: translateY(-2px); box-shadow: 0 0 80px rgba(112,0,255,0.55); }
+
+.dl-note {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; color: var(--muted); margin-top: 20px;
+  letter-spacing: 1px;
+}
+
+/* ── DISCORD ── */
+#community {
+  text-align: center;
+  background: linear-gradient(to bottom, transparent, rgba(88,101,242,0.05), transparent);
+}
+.discord-card {
+  max-width: 560px; margin: 48px auto 0;
+  background: rgba(88,101,242,0.06);
+  border: 1px solid rgba(88,101,242,0.2);
+  border-radius: 16px; padding: 40px;
+  transition: all 0.3s;
+}
+.discord-card:hover { border-color: rgba(88,101,242,0.4); box-shadow: 0 0 60px rgba(88,101,242,0.1); }
+.discord-icon { font-size: 48px; margin-bottom: 20px; }
+.discord-title { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+.discord-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px; color: var(--muted); line-height: 1.8; margin-bottom: 32px;
+}
+.btn-discord {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #5865F2; color: #fff; text-decoration: none;
+  padding: 14px 36px; border-radius: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px; letter-spacing: 2px;
+  transition: all 0.3s;
+}
+.btn-discord:hover { background: #4752c4; transform: translateY(-2px); box-shadow: 0 0 40px rgba(88,101,242,0.4); }
+
+/* ── FOOTER ── */
+footer {
+  position: relative; z-index: 2;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 40px 6vw;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+}
+.footer-logo {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px; letter-spacing: 3px; color: var(--muted);
+}
+.footer-copy {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.2);
+}
+
+/* ── SCROLL REVEAL ── */
+.reveal {
+  opacity: 0; transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ── GLOW LINE ── */
+.glow-line {
+  position: absolute; pointer-events: none;
+  width: 600px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--void2), transparent);
+  opacity: 0.3;
+}
+
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .hero-stats { gap: 30px; }
+  .dl-card { padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="cur2"></div>
+<canvas id="bgc"></canvas>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <span></span>
+    VOIDCLIENT
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#download">Download</a>
+    
+    <a href="#download" class="nav-dl">▼ DOWNLOAD</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-pre">⬡ DER ULTIMATIVE MINECRAFT LAUNCHER</div>
+  <h1 class="hero-title">
+    <span class="void">VOID</span>
+    <span class="client">CLIENT</span>
+  </h1>
+  <p class="hero-sub">
+    Modpacks verwalten, Java installieren, Discord RPC —<br>
+    alles in einem Launcher der genauso krass aussieht<br>
+    wie das Game selbst.
+  </p>
+  <div class="hero-btns">
+    <a href="#download" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>JETZT DOWNLOADEN</span>
+    </a>
+    <a href="#community" class="btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      DISCORD
+    </a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num" data-count="500">0</div>
+      <div class="stat-label">DOWNLOADS</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" data-count="12">0</div>
+      <div class="stat-label">MODPACKS</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" data-count="3">0</div>
+      <div class="stat-label">JAVA VERSIONEN</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" data-count="100">0</div>
+      <div class="stat-label">% KOSTENLOS</div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    SCROLL
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="features-header reveal">
+    <div class="section-pre">⬡ WAS VOIDCLIENT KANN</div>
+    <h2 class="section-title">Features die<br>kein anderer hat.</h2>
+    <p class="section-sub">Gebaut von Gamern für Gamer. Kein Bloat, keine Ads, keine Kompromisse.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feat reveal">
+      <div class="feat-icon">📦</div>
+      <div class="feat-title">Modpack Manager</div>
+      <div class="feat-desc">Erstelle, bearbeite und starte eigene Modpacks. Mods suchen und direkt installieren — ohne Browser.</div>
+      <span class="feat-tag">FORGE · FABRIC · QUILT</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">☕</div>
+      <div class="feat-title">Java Auto-Install</div>
+      <div class="feat-desc">Java 17, 21 und 25 direkt im Launcher installieren. Kein manuelles Setup, kein Kopfschmerz.</div>
+      <span class="feat-tag">JAVA 17 · 21 · 25</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">🎮</div>
+      <div class="feat-title">Discord Rich Presence</div>
+      <div class="feat-desc">Zeig deinen Freunden was du spielst — automatisch mit Packname, Version und Spielzeit.</div>
+      <span class="feat-tag">LIVE STATUS</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">💾</div>
+      <div class="feat-title">Backup & Restore</div>
+      <div class="feat-desc">Automatische Backups deiner Welten und Modpacks. Nie wieder Fortschritt verlieren.</div>
+      <span class="feat-tag">AUTO BACKUP</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">📸</div>
+      <div class="feat-title">Screenshot Gallery</div>
+      <div class="feat-desc">Alle Screenshots direkt im Launcher anzeigen und verwalten — kein File-Explorer nötig.</div>
+      <span class="feat-tag">IN-APP GALLERY</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">⏱️</div>
+      <div class="feat-title">Spielzeit Tracking</div>
+      <div class="feat-desc">Sieh wie viele Stunden du in jedem Modpack verbracht hast. Pro Pack, detailliert.</div>
+      <span class="feat-tag">PER PACK STATS</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">🖼️</div>
+      <div class="feat-title">Skin Manager</div>
+      <div class="feat-desc">Skin direkt im Launcher ändern und auf dein Microsoft-Konto anwenden. Sofort.</div>
+      <span class="feat-tag">MICROSOFT AUTH</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">🌐</div>
+      <div class="feat-title">Server Ping</div>
+      <div class="feat-desc">Ping deine Lieblingsserver und sieh wie viele Spieler online sind — live, ohne Minecraft zu starten.</div>
+      <span class="feat-tag">LIVE PING</span>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-icon">🚨</div>
+      <div class="feat-title">Crash Log Viewer</div>
+      <div class="feat-desc">Crash gehabt? Direkt im Launcher den letzten Log anzeigen und checken was schiefgelaufen ist.</div>
+      <span class="feat-tag">AUTO DETECT</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- DOWNLOAD -->
+<section id="download">
+  <div class="features-header reveal">
+    <div class="section-pre">⬡ KOSTENLOS · IMMER</div>
+    <h2 class="section-title">Bereit loszulegen?</h2>
+    <p class="section-sub" style="margin:0 auto;">Einfach downloaden, installieren, spielen. Kein Account nötig — nur dein Microsoft-Login für Minecraft.</p>
+  </div>
+  <div class="dl-card reveal">
+    <div class="dl-version" id="dlVersion">AKTUELLE VERSION — v2.1.2</div>
+    <div class="dl-name">VoidClient Launcher</div>
+    <div class="dl-size" id="dlSize">Windows 10/11 · Kostenlos · Wird geladen...</div>
+    <div class="dl-platforms">
+      <a href="https://github.com/pluh305/voidclient/releases/download/v2.1.2/VoidClient.Setup.2.1.2.exe" class="dl-platform">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.949"/></svg>
+        WINDOWS .EXE
+      </a>
+      <a href="https://github.com/pluh305/voidclient/releases/tag/v2.1.2" target="_blank" class="dl-platform">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+        ALLE RELEASES
+      </a>
+    </div>
+    <a href="https://github.com/pluh305/voidclient/releases/download/v2.1.2/VoidClient.Setup.2.1.2.exe" class="dl-main">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      DOWNLOAD FÜR WINDOWS
+    </a>
+    <div class="dl-note">⚡ Kein Account nötig · Open Source · Keine Werbung · Kein Tracking</div>
+  </div>
+</section>
+
+
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">⬡ VOIDCLIENT</div>
+  <div class="footer-copy">© 2025 VoidClient · Kostenlos · Open Source</div>
+</footer>
+
+<script>
+// ── CURSOR ────────────────────────────────────────────
+const cur = document.getElementById('cur');
+const cur2 = document.getElementById('cur2');
+let mx = 0, my = 0, cx2 = 0, cy2 = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function animCur() {
+  requestAnimationFrame(animCur);
+  cur.style.left = mx + 'px'; cur.style.top = my + 'px';
+  cx2 += (mx - cx2) * 0.12; cy2 += (my - cy2) * 0.12;
+  cur2.style.left = cx2 + 'px'; cur2.style.top = cy2 + 'px';
+})();
+document.querySelectorAll('a,button').forEach(el => {
+  el.addEventListener('mouseenter', () => { cur.style.width='20px';cur.style.height='20px';cur2.style.width='60px';cur2.style.height='60px'; });
+  el.addEventListener('mouseleave', () => { cur.style.width='10px';cur.style.height='10px';cur2.style.width='36px';cur2.style.height='36px'; });
+});
+
+// ── PARTICLE CANVAS ───────────────────────────────────
+const canvas = document.getElementById('bgc');
+const ctx = canvas.getContext('2d');
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+window.addEventListener('resize', () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; });
+
+const particles = [];
+for (let i = 0; i < 80; i++) {
+  particles.push({
+    x: Math.random() * W, y: Math.random() * H,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    r: 0.5 + Math.random() * 1.5,
+    a: 0.1 + Math.random() * 0.4,
+    hue: 260 + Math.random() * 60
+  });
+}
+
+// Mouse influence
+let pmx = W/2, pmy = H/2;
+document.addEventListener('mousemove', e => { pmx = e.clientX; pmy = e.clientY; });
+
+function drawBg() {
+  requestAnimationFrame(drawBg);
+  ctx.clearRect(0, 0, W, H);
+
+  // Nebula
+  const grad = ctx.createRadialGradient(W*0.3, H*0.3, 0, W*0.3, H*0.3, W*0.5);
+  grad.addColorStop(0, 'rgba(112,0,255,0.04)');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  const grad2 = ctx.createRadialGradient(W*0.8, H*0.7, 0, W*0.8, H*0.7, W*0.4);
+  grad2.addColorStop(0, 'rgba(0,212,255,0.03)');
+  grad2.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad2; ctx.fillRect(0,0,W,H);
+
+  particles.forEach(p => {
+    // Mouse attract
+    const dx = pmx - p.x, dy = pmy - p.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist < 200) { p.vx += dx/dist*0.008; p.vy += dy/dist*0.008; }
+
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.99; p.vy *= 0.99;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = `hsla(${p.hue},80%,70%,${p.a})`;
+    ctx.fill();
+  });
+
+  // Connections
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i+1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if (d < 120) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(112,0,255,${0.06*(1-d/120)})`;
+        ctx.lineWidth = 0.5; ctx.stroke();
+      }
+    }
+  }
+}
+drawBg();
+
+// ── SCROLL REVEAL ─────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), 100);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach((el, i) => {
+  el.style.transitionDelay = (i % 4) * 0.08 + 's';
+  observer.observe(el);
+});
+
+// ── GITHUB RELEASES API ───────────────────────────────
+async function loadGithubStats() {
+  try {
+    const res = await fetch('https://api.github.com/repos/pluh305/voidclient/releases');
+    const releases = await res.json();
+
+    // Alle Downloads über alle Releases summieren
+    let totalDownloads = 0;
+    releases.forEach(r => {
+      r.assets.forEach(a => { totalDownloads += a.download_count; });
+    });
+
+    // Neueste Release
+    const latest = releases[0];
+    const version = latest ? latest.tag_name : 'v2.1.2';
+    const exeAsset = latest?.assets?.find(a => a.name.endsWith('.exe'));
+    const sizeMB = exeAsset ? (exeAsset.size / 1024 / 1024).toFixed(0) + ' MB' : '~85 MB';
+
+    // UI updaten
+    const dlCount = document.getElementById('dlCount');
+    if (dlCount) animateCount(dlCount, totalDownloads);
+
+    const dlVersion = document.getElementById('dlVersion');
+    if (dlVersion) dlVersion.textContent = 'AKTUELLE VERSION — ' + version;
+
+    const dlSize = document.getElementById('dlSize');
+    if (dlSize) dlSize.textContent = 'Windows 10/11 · ' + sizeMB + ' · Kostenlos';
+
+    // Download-Link auf neueste exe setzen
+    if (exeAsset) {
+      document.querySelectorAll('.dl-main, .dl-platform[href*=".exe"]').forEach(el => {
+        el.href = exeAsset.browser_download_url;
+      });
+    }
+  } catch(e) {
+    const dlCount = document.getElementById('dlCount');
+    if (dlCount) dlCount.textContent = '500+';
+  }
+}
+
+function animateCount(el, target) {
+  let current = 0;
+  const step = target / 80;
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = Math.floor(current).toLocaleString('de-DE') + '+';
+    if (current >= target) { el.textContent = Math.floor(target).toLocaleString('de-DE') + '+'; clearInterval(timer); }
+  }, 16);
+}
+
+loadGithubStats();
+
+// ── COUNT UP ANIMATION ────────────────────────────────
+const countEls = document.querySelectorAll('[data-count]');
+const countObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const target = parseInt(el.dataset.count);
+    let current = 0;
+    const step = target / 60;
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = Math.floor(current) + (target === 100 ? '' : '+');
+      if (current >= target) { el.textContent = target + (target < 100 ? '+' : '%'); clearInterval(timer); }
+    }, 16);
+    countObs.unobserve(el);
+  });
+}, { threshold: 0.5 });
+countEls.forEach(el => countObs.observe(el));
+</script>
+</body>
+</html>
